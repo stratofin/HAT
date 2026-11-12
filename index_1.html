@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>帽子設計模組器</title>
+<meta name="description" content="3D 帽子設計工具：自訂 logo、文字、位置與帽型，輸出截圖與工廠規格單。">
+<meta name="theme-color" content="#1c2233">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M8 40c0-16 11-28 24-28s24 12 24 28z' fill='%231c2233'/%3E%3Cpath d='M4 40h44c6 0 12 3 12 7H8c-3 0-4-3-4-7z' fill='%232c3550'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Dancing+Script:wght@600;700&family=Graduate&family=Grenze+Gotisch:wght@400;600;800&family=Lobster&family=Noto+Sans+TC:wght@400;700;900&family=Noto+Serif+TC:wght@400;700;900&family=Oswald:wght@400;600;700&family=Permanent+Marker&family=Pirata+One&family=Playfair+Display:wght@400;700;900&display=swap">
+<style>
+:root{--bg:#f6f6f4;--panel:#fff;--ink:#1d1f23;--muted:#6b6f78;--line:#e3e3df;--accent:#2f5bea;--accent-soft:#e8eefe;--stage:#e4e5e8;--danger:#c43c3c}
+@media (prefers-color-scheme:dark){:root{--bg:#141518;--panel:#1d1f23;--ink:#ececee;--muted:#9a9ea8;--line:#2e3036;--accent:#7b9bff;--accent-soft:#232c48;--stage:#24262b;--danger:#ff7a7a}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif}
+.app{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,1fr);gap:16px;max-width:1280px;margin:0 auto;padding:16px}
+@media (max-width:820px){.app{grid-template-columns:1fr;padding:0;gap:0}}
+.stageWrap{position:sticky;top:16px;align-self:start}
+@media (max-width:820px){.stageWrap{top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}}
+.stage{position:relative;background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--stage) 70%,#fff) 0,var(--stage) 70%);border-radius:14px;overflow:hidden;height:min(68vh,620px)}
+@media (max-width:820px){.stage{border-radius:0;height:48vh}}
+.stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.bar{position:absolute;left:8px;right:8px;display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.bar.top{top:8px}.bar.bot{bottom:8px;justify-content:space-between}
+.pill{border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(6px);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.pill.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.hint{color:var(--muted);font-size:12px;padding:6px 12px 10px}
+.side{display:flex;flex-direction:column;gap:12px}
+@media (max-width:820px){.side{padding:12px}}
+.tabs{display:flex;gap:6px}
+.tabs button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
+.tabs button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.card h3{margin:0 0 10px;font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 10px;cursor:pointer;text-align:left;font:inherit;color:var(--ink);max-width:100%}
+.chip b{display:block;font-size:13px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip span{font-size:11px;color:var(--muted)}
+.chip.on{border-color:var(--accent);background:var(--accent-soft)}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:10px;padding:8px 12px;font:inherit;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btnRow{display:flex;gap:8px;flex-wrap:wrap}
+.field{display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:10px;padding:6px 0}
+.field label{color:var(--muted);font-size:13px}
+.field output{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);min-width:38px;text-align:right}
+.field input[type=text],.field select,textarea{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px;font:inherit}
+.field input[type=range]{width:100%;accent-color:var(--accent)}
+.colorRow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.colorRow input[type=color]{width:34px;height:30px;border:1px solid var(--line);border-radius:8px;padding:0;background:none}
+.sw{width:24px;height:24px;border-radius:50%;border:1px solid rgba(127,127,127,.4);cursor:pointer;padding:0}
+.sep{height:1px;background:var(--line);margin:8px 0}
+textarea{min-height:120px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.empty{color:var(--muted);padding:6px 0}
+.small{font-size:12px;color:var(--muted)}
+.pane{display:none;flex-direction:column;gap:12px}.pane.on{display:flex}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;opacity:0;transition:.25s;pointer-events:none;z-index:30}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:40;padding:16px}
+.modal.on{display:flex}
+.modal .box{background:var(--panel);border-radius:14px;padding:12px;max-width:720px;width:100%;text-align:center}
+.modal img{width:100%;border-radius:10px;background:var(--stage)}
+.libGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:10px}
+.tile{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+.thumb{border:0;padding:6px;cursor:pointer;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#bfc2c8 0 25%,#e9eaec 0 50%) 0 0/14px 14px}
+.thumb img{max-width:100%;max-height:100%;object-fit:contain}
+.tname{font-size:12px;padding:4px 6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tact{display:flex;gap:4px;padding:4px 6px 6px}
+.tact button{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;font:inherit;font-size:11px;padding:3px 0;cursor:pointer}
+.tact button.danger{color:var(--danger)}
+.filters{display:flex;gap:6px;margin-top:10px}
+.filters button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:4px 12px;font:inherit;font-size:12px;cursor:pointer}
+.filters button.on{background:var(--ink);color:var(--bg)}
+.uploadBtn{position:relative;overflow:hidden}
+.uploadBtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.shotBox{background:var(--panel);border-radius:14px;padding:14px;width:min(1000px,100%);max-height:94vh;overflow:auto;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(240px,1fr);gap:14px}
+@media (max-width:760px){.shotBox{grid-template-columns:1fr}}
+.shotPrev{position:relative;display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#cfd1d5 0 25%,#eceef0 0 50%) 0 0/18px 18px;border-radius:10px;min-height:220px;overflow:hidden;touch-action:none}
+.shotPrev canvas{max-width:100%;max-height:60vh;display:block}
+#cropBox{position:absolute;border:2px dashed #2f5bea;box-shadow:0 0 0 9999px rgba(0,0,0,.35);pointer-events:none;display:none}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
+.seg button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.optLabel{font-size:12px;color:var(--muted);margin:10px 0 6px}
+.dsList{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.ds{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--bg)}
+.ds.on{border-color:var(--accent);background:var(--accent-soft)}
+.ds img{width:64px;height:64px;border-radius:8px;object-fit:cover;background:var(--stage)}
+.ds b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds .acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.ds .acts button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;font:inherit;font-size:12px;padding:4px 8px;cursor:pointer}
+.ds .acts button.danger{color:var(--danger)}
+.typeGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.typeBtn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:8px 10px;text-align:left;font:inherit;cursor:pointer}
+.typeBtn b{display:block;font-size:13px}.typeBtn span{font-size:11px;color:var(--muted)}
+.typeBtn.on{border-color:var(--accent);background:var(--accent-soft)}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);pointer-events:none}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div class="app">
+  <div class="stageWrap">
+    <div class="stage" id="stage">
+      <div class="loading" id="loading">載入 3D 中…</div>
+      <div class="bar top" id="camBar">
+        <button class="pill" data-cam="front">正面</button>
+        <button class="pill" data-cam="left">左側</button>
+        <button class="pill" data-cam="right">右側</button>
+        <button class="pill" data-cam="back">背面</button>
+        <button class="pill" data-cam="top">上方</button>
+        <button class="pill" data-cam="under">簷底</button>
+      </div>
+      <div class="bar bot">
+        <div style="display:flex;gap:6px">
+          <button class="pill" id="autoBtn">自動旋轉</button>
+          <button class="pill" id="moveBtn">移動 logo</button>
+        </div>
+        <div style="display:flex;gap:6px"><button class="pill" id="zoomOut" aria-label="縮小">－</button><button class="pill" id="zoomIn" aria-label="放大">＋</button><button class="pill" id="shotBtn">截圖</button></div>
+      </div>
+    </div>
+    <div class="hint" id="hint">單指／滑鼠拖曳旋轉，雙指或滾輪縮放。點帽子上的 logo 可選取。</div>
+  </div>
+
+  <div class="side">
+    <div class="tabs" id="paneTabs">
+      <button data-pane="mods" class="on">模組</button>
+      <button data-pane="lib">素材庫</button>
+      <button data-pane="cap">帽身</button>
+      <button data-pane="out">存檔 / 匯出</button>
+    </div>
+    <div class="pane on" id="pane-mods">
+      <div class="card">
+        <h3>所有模組</h3>
+        <div class="chips" id="modList"></div>
+        <div class="sep"></div>
+        <div class="btnRow"><button class="btn" id="addText">＋ 文字模組</button><button class="btn" id="addImg">＋ 圖片 Logo</button></div>
+      </div>
+      <div class="card" id="editor"></div>
+    </div>
+    <div class="pane" id="pane-lib">
+      <div class="card">
+        <h3>設計師素材庫</h3>
+        <p class="small" id="libNote" style="margin-top:0">載入中…</p>
+        <div class="btnRow">
+          <span class="btn primary uploadBtn">上傳 PNG（可多選）<input type="file" id="libFile" multiple accept="image/png,image/webp,image/jpeg,image/svg+xml"></span>
+          <select id="libCat" class="btn"><option value="auto">自動分類</option><option value="text">都放文字類</option><option value="graphic">都放圖案類</option></select>
+        </div>
+        <div class="filters" id="libFilter"><button data-f="all" class="on">全部</button><button data-f="text">文字類</button><button data-f="graphic">圖案類</button></div>
+        <div class="libGrid" id="libGrid"></div>
+      </div>
+      <div class="card small">
+        <b style="color:var(--ink)">怎麼用：</b>點縮圖就會放上帽子，變成一個圖片模組，接著到「模組」分頁調位置、大小和工藝。<br>
+        文字類（橫長的字樣 PNG）預設放在<b>背面中央</b>，用平面刺繡；圖案類預設放在<b>正面中央</b>，用立體刺繡。<br>
+        同一張素材可以放很多次，例如正面放大 logo、側邊再放一個小的。PNG 背景透明效果最好。
+      </div>
+    </div>
+    <div class="pane" id="pane-cap"><div class="card" id="capPanel"></div></div>
+    <div class="pane" id="pane-out">
+      <div class="card">
+        <h3>存成檔案／讀取檔案</h3>
+        <p class="small" style="margin-top:0">把目前的設計下載成一個檔案，可以傳給別人或自己備份。對方在這個頁面按「開啟設計檔」選這個檔案，就會看到一模一樣的帽子。</p>
+        <div class="btnRow">
+          <button class="btn primary" id="fileSave">下載設計檔</button>
+          <span class="btn uploadBtn">開啟設計檔<input type="file" id="fileOpen" accept=".json,application/json"></span>
+          <button class="btn" id="copyJson">複製設計文字</button>
+        </div>
+        <div class="small" id="fileMsg" style="margin-top:6px"></div>
+      </div>
+      <div class="card">
+        <h3>本機快速存檔（這個瀏覽器）</h3>
+        <p class="small" id="dsNote" style="margin-top:0"></p>
+        <div class="field" style="grid-template-columns:76px 1fr"><label>設計名稱</label><input type="text" id="dsName" placeholder="例如：WAKNS 海軍藍 v2"></div>
+        <div class="btnRow"><button class="btn primary" id="dsSave">儲存</button><button class="btn" id="dsSaveAs">另存新設計</button><button class="btn" id="dsNew">新設計</button></div>
+        <div class="small" id="dsCur" style="margin-top:6px"></div>
+        <div class="dsList" id="dsList"></div>
+      </div>
+      <div class="card">
+        <h3>給工廠的規格單</h3>
+        <textarea id="spec" readonly></textarea>
+        <div class="btnRow" style="margin-top:8px"><button class="btn primary" id="copySpec">複製規格</button><button class="btn danger" id="reset">重設為原版 WAKNS</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal" id="shotModal"><div class="shotBox">
+  <div>
+    <div class="shotPrev" id="shotPrev"><canvas id="shotCv"></canvas><div id="cropBox"></div></div>
+    <div class="small" id="shotInfo" style="margin-top:6px"></div>
+  </div>
+  <div>
+    <h3 style="margin:0 0 4px;font-size:15px">截圖輸出</h3>
+    <div class="optLabel">範圍</div>
+    <div class="seg" data-opt="range"><button data-v="fit">只有帽子</button><button data-v="square">正方形</button><button data-v="view">目前畫面</button><button data-v="grid">四視角拼圖</button><button data-v="custom">自訂框選</button></div>
+    <div class="small" id="cropHint" style="display:none;margin-top:6px">在左邊預覽圖上拖曳，框出要輸出的範圍。</div>
+    <div class="optLabel">背景</div>
+    <div class="seg" data-opt="bg"><button data-v="transparent">透明</button><button data-v="#ffffff">白色</button><button data-v="#e4e5e8">淺灰</button><button data-v="#111111">黑色</button><button data-v="custom">自選<input type="color" id="bgColor" value="#f3e9d8" style="width:22px;height:18px;border:0;padding:0;margin-left:6px;vertical-align:middle"></button></div>
+    <div class="optLabel">解析度</div>
+    <div class="seg" data-opt="res"><button data-v="1">1x</button><button data-v="2">2x</button><button data-v="3">3x 高清</button></div>
+    <div class="optLabel">格式與細節</div>
+    <div class="seg" data-opt="fmt"><button data-v="png">PNG</button><button data-v="jpg">JPG</button></div>
+    <label class="small" style="display:block;margin-top:8px;color:var(--ink)"><input type="checkbox" id="optShadow" checked> 地面陰影</label>
+    <label class="small" style="display:block;margin-top:4px;color:var(--ink)"><input type="checkbox" id="optLabels" checked> 拼圖標示視角名稱</label>
+    <div class="sep"></div>
+    <div class="btnRow"><button class="btn primary" id="shotSave">下載圖片</button><button class="btn" id="shotCopy">複製圖片</button><button class="btn" id="shotClose">關閉</button></div>
+    <div class="small" id="shotMsg" style="margin-top:8px"></div>
+  </div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+
+/* ================= data ================= */
+const FONTS=[['Graduate','Graduate（學院拱字）'],['Anton','Anton（粗壓縮）'],['Bebas Neue','Bebas Neue'],['Oswald','Oswald'],['Grenze Gotisch','Grenze Gotisch（哥德手寫）'],['Pirata One','Pirata One（哥德）'],['Dancing Script','Dancing Script（草寫）'],['Lobster','Lobster'],['Permanent Marker','Permanent Marker（麥克筆）'],['Playfair Display','Playfair Display（襯線）'],['Noto Sans TC','思源黑體（中文）'],['Noto Serif TC','思源宋體（中文）']];
+const STYLES={puff:'立體刺繡 3D',flat:'平面刺繡',print:'印刷 / 熱轉印'};
+const GROUPS={front:'正面',left:'左側',right:'右側',back:'背面',top:'帽頂',under:'帽簷底面'};
+const POS={
+ 'front-center':{g:'front',c:'crown',u:.25,v:.56,label:'正面中央'},
+ 'front-top':{g:'front',c:'crown',u:.25,v:.32,label:'正面上方'},
+ 'front-low':{g:'front',c:'crown',u:.25,v:.76,label:'正面下方（貼近帽簷）'},
+ 'front-left':{g:'front',c:'crown',u:.19,v:.64,label:'正面左片（偏左）'},
+ 'front-right':{g:'front',c:'crown',u:.31,v:.64,label:'正面右片（偏右）'},
+ 'visor':{g:'front',c:'visor',u:.5,v:.55,label:'帽簷正中'},
+ 'visor-left':{g:'front',c:'visor',u:.24,v:.5,label:'帽簷左側'},
+ 'visor-right':{g:'front',c:'visor',u:.76,v:.5,label:'帽簷右側'},
+ 'brim-front':{g:'front',c:'brim',u:.25,v:.5,label:'帽簷前方'},
+ 'left-front':{g:'left',c:'crown',u:.40,v:.70,label:'左前（太陽穴位置）'},
+ 'left-center':{g:'left',c:'crown',u:.5,v:.55,label:'左側中央'},
+ 'left-back':{g:'left',c:'crown',u:.56,v:.85,label:'左側後下方'},
+ 'brim-left':{g:'left',c:'brim',u:.5,v:.5,label:'帽簷左側'},
+ 'right-front':{g:'right',c:'crown',u:.10,v:.70,label:'右前（太陽穴位置）'},
+ 'right-center':{g:'right',c:'crown',u:0,v:.55,label:'右側中央'},
+ 'right-back':{g:'right',c:'crown',u:.94,v:.85,label:'右側後下方'},
+ 'brim-right':{g:'right',c:'brim',u:0,v:.5,label:'帽簷右側'},
+ 'back-upper':{g:'back',c:'crown',u:.75,v:.27,label:'背面上方'},
+ 'back-center':{g:'back',c:'crown',u:.75,v:.45,label:'背面中央'},
+ 'back-open':{g:'back',c:'crown',u:.75,v:.66,label:'背面開口上方（弧形字）'},
+ 'back-left':{g:'back',c:'crown',u:.665,v:.85,label:'背面左下'},
+ 'back-right':{g:'back',c:'crown',u:.835,v:.85,label:'背面右下'},
+ 'brim-back':{g:'back',c:'brim',u:.75,v:.5,label:'帽簷後方'},
+ 'crown-top':{g:'top',c:'crown',u:.25,v:.1,label:'帽頂'},
+ 'under':{g:'under',c:'under',u:.5,v:.5,label:'帽簷內側（底面）'}
+};
+const CAPS={
+ dad:{label:'老帽 Dad Cap',desc:'無結構、低帽冠、微彎簷，最百搭',Y:.88,profile:'round',seams:'six',visor:{len:.82,droop:.3},closure:'strap',button:true},
+ structured:{label:'結構棒球帽',desc:'前片有襯、帽冠挺，正面立體刺繡最好看',Y:1.0,profile:'structured',seams:'six',visor:{len:.86,droop:.33},closure:'strap',button:true},
+ snapback:{label:'平簷 Snapback',desc:'高帽冠＋平帽簷，街頭感最重',Y:1.1,profile:'structured',seams:'six',visor:{len:.92,droop:.02},closure:'snap',button:true},
+ trucker:{label:'卡車帽 Trucker',desc:'正面海綿片＋網布背，正面可放大圖',Y:1.08,profile:'structured',seams:'trucker',mesh:true,visor:{len:.86,droop:.26},closure:'snap',button:true},
+ camp:{label:'五片帽 Camp Cap',desc:'低平帽頂、正面一整片，滑板／戶外風',Y:.72,profile:'flat',seams:'five',visor:{len:.72,droop:.03},closure:'strap',button:false},
+ bucket:{label:'漁夫帽 Bucket',desc:'一圈下垂帽簷，潮流必備單品',Y:.8,profile:'bucket',seams:'bucket',brim:true,closure:null,button:false}
+};
+const MESH_U=[.44,1.06];
+function posAllowed(k,type){const p=POS[k],c=CAPS[type||S.capType];if(!p)return false;
+ if(c.brim){if(p.c==='visor'||p.c==='under')return false;if(k==='back-open')return false}
+ else if(p.c==='brim')return false;
+ if(c.mesh&&p.c==='crown'){let u=p.u;if(u<MESH_U[0]-.0001)u+=1;if(k==='crown-top'||(u>MESH_U[0]&&u<MESH_U[1]))return false}
+ return true}
+const SWATCHES=['#16181d','#1c2233','#f3f1ea','#c9b48f','#55603f','#6e2430','#8d9096','#2d4a7a'];
+const INK=['#f2efe6','#ffffff','#16181d','#c9a24b','#b8322e','#2f5bea','#7fb3a0','#e9a7b8'];
+const CM_PER_UNIT=0.073;
+
+function defaultState(){return{
+ capType:'dad',cap:{body:'#1c2233',visor:'#1c2233',under:'#181d2b',button:'#1c2233',stitch:'#2c3550',strap:'#1c2233',mesh:'#1c2233',lining:'#2a2d33'},
+ modules:[
+  {id:'m1',kind:'text',text:'WAKNS',pos:'front-center',font:'Graduate',size:46,weight:400,ls:1,arc:16,rot:0,dx:0,dy:0,color:'#f2efe6',style:'puff'},
+  {id:'m2',kind:'text',text:'Beauty begins in weakness',pos:'left-back',font:'Grenze Gotisch',size:12,weight:600,ls:0,arc:-3,rot:-6,dx:0,dy:0,color:'#ece8dc',style:'flat'}
+ ],sel:'m1'}}
+let S;
+try{S=JSON.parse(localStorage.getItem('capConfigurator.v2'))}catch(e){}
+if(!S){try{const o=JSON.parse(localStorage.getItem('capConfigurator.v1'));if(o&&o.modules){S={...defaultState(),cap:{...defaultState().cap,...o.cap},modules:o.modules,sel:o.sel}}}catch(e){}}
+if(!S||!S.modules)S=defaultState();
+S.modules.forEach(m=>{if(!POS[m.pos])m.pos=m.pos==='back-strap'?'back-open':'front-center'});
+if(!CAPS[S.capType])S.capType='dad';S.cap={...defaultState().cap,...S.cap};
+function save(){try{localStorage.setItem('capConfigurator.v2',JSON.stringify(S))}catch(e){}updateOut()}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const mod=id=>S.modules.find(m=>m.id===id);
+const uid=()=>'m'+Math.random().toString(36).slice(2,8);
+function shade(hex,a){const n=parseInt(hex.slice(1),16);const f=v=>Math.max(0,Math.min(255,Math.round(a<0?v*(1+a):v+(255-v)*a))).toString(16).padStart(2,'0');return'#'+f(n>>16&255)+f(n>>8&255)+f(n&255)}
+
+/* ================= textures ================= */
+const W=3072,H=768,VW=1536,VH=384,BW=3072,BH=256;
+const KV=4.3,KB=3.6;
+let K=H*0.00575,RATIO=.877,PROF=null;
+const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+const crownC=mk(W,H),crownB=mk(W,H),crownA=mk(W,H),visorC=mk(VW,VH),visorB=mk(VW,VH),underC=mk(VW,VH),brimC=mk(BW,BH),brimB=mk(BW,BH);
+const imgCache={};
+let showSel=true;
+// crown profile: theta 0..PI/2 -> [radius, height]
+function profile(type){const c=CAPS[type],Y=c.Y;
+ if(c.profile==='structured')return t=>[Math.pow(Math.sin(t),.78),Math.pow(Math.cos(t),.8)*Y];
+ if(c.profile==='flat')return t=>[Math.pow(Math.sin(t),.55),Math.pow(Math.cos(t),.42)*Y];
+ if(c.profile==='bucket')return t=>{const p=t/(Math.PI/2);if(p<.28){const q=p/.28;return[.88*Math.sin(q*Math.PI/2),Y-.07*q*q]}const q=(p-.28)/.72;return[.88+.12*q,(Y-.07)*(1-q)]};
+ return t=>[Math.sin(t),Math.cos(t)*Y]}
+function computeScale(){PROF=profile(S.capType);let L=0,prev=PROF(0);for(let i=1;i<=200;i++){const p=PROF(i/200*Math.PI/2);L+=Math.hypot((p[0]-prev[0])*1.06,p[1]-prev[1]);prev=p}
+ RATIO=(L*W)/(6.66*H);K=0.0084*H/L}
+const sxAt=v=>RATIO/Math.max(PROF(Math.min(Math.max(v,0),1)*Math.PI/2)[0],0.18);
+const SURF={
+ crown:{w:W,h:H,wrap:true,sx:v=>sxAt(v),k:()=>K},
+ visor:{w:VW,h:VH,wrap:false,sx:()=>1.04,k:()=>KV},
+ under:{w:VW,h:VH,wrap:false,sx:()=>1.04,k:()=>KV},
+ brim:{w:BW,h:BH,wrap:true,sx:()=>.83,k:()=>KB}
+};
+
+function twill(ctx,w,h,a,b){const p=mk(10,10),x=p.getContext('2d');x.strokeStyle=a;x.lineWidth=2;x.beginPath();x.moveTo(-2,12);x.lineTo(12,-2);x.stroke();x.strokeStyle=b;x.lineWidth=1;x.beginPath();x.moveTo(3,12);x.lineTo(12,3);x.stroke();ctx.fillStyle=ctx.createPattern(p,'repeat');ctx.fillRect(0,0,w,h)}
+function stitchPattern(ctx,color){const p=mk(6,6),x=p.getContext('2d');x.fillStyle=color;x.fillRect(0,0,6,6);x.strokeStyle='rgba(0,0,0,.22)';x.lineWidth=1;x.beginPath();x.moveTo(0,6);x.lineTo(6,0);x.stroke();x.strokeStyle='rgba(255,255,255,.18)';x.beginPath();x.moveTo(0,3);x.lineTo(3,0);x.stroke();return ctx.createPattern(p,'repeat')}
+function openPath(ctx){const cx=.75*W,hw=.052*W,top=.72*H,r=(H-top)*.55;ctx.beginPath();ctx.moveTo(cx-hw,H+2);ctx.lineTo(cx-hw,top+r);ctx.ellipse(cx,top+r,hw,r,0,Math.PI,0);ctx.lineTo(cx+hw,H+2);ctx.closePath()}
+
+function drawText(ctx,m,mode){
+ ctx.font=`${m.weight} ${m.size}px "${m.font}"`;ctx.textBaseline='middle';ctx.textAlign='center';
+ const chars=[...(m.text||' ')],ws=chars.map(c=>ctx.measureText(c).width+m.ls);
+ const Wt=ws.reduce((a,b)=>a+b,0)-m.ls;let pos=[],s=-Wt/2;
+ const a=m.arc,R=Math.abs(a)<.5?0:((Wt/2)**2+a*a)/(2*Math.abs(a)),sg=a>0?1:-1;
+ chars.forEach((c,i)=>{const mid=s+(ws[i]-m.ls)/2;s+=ws[i];
+  if(!R)pos.push([c,mid,0,0]);else{const an=mid/R;pos.push([c,R*Math.sin(an),sg*(R-R*Math.cos(an))-sg*a/2,sg*an])}});
+ const pass=(fill,stroke,lw,oy)=>pos.forEach(([c,x,y,r])=>{ctx.save();ctx.translate(x,y+oy);ctx.rotate(r);if(stroke){ctx.lineJoin='round';ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.strokeText(c,0,0)}if(fill){ctx.fillStyle=fill;ctx.fillText(c,0,0)}ctx.restore()});
+ if(mode==='bump'){
+  if(m.style==='print')return[Wt,m.size];
+  ctx.filter=m.style==='puff'?'blur(1.2px)':'blur(.4px)';
+  const g=m.style==='puff'?'#fff':'#b0b0b0';pass(g,g,m.size*.06,0);ctx.filter='none';
+ }else{
+  if(m.style==='puff')pass(shade(m.color,-.55),shade(m.color,-.55),m.size*.05,m.size*.05);
+  const f=m.style==='print'?m.color:stitchPattern(ctx,m.color);
+  pass(f,m.style==='puff'?shade(m.color,-.18):null,m.size*.03,0);
+ }
+ return[Wt,m.size*.8+Math.abs(a)];
+}
+function drawImg(ctx,m,mode){
+ const w=m.size,h=w*(m.ratio||1),im=imgCache[m.id];
+ if(!m.img||!im||!im.complete||!im.naturalWidth){if(mode!=='bump'){ctx.setLineDash([4,3]);ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=1;ctx.strokeRect(-w/2,-h/2,w,h);ctx.setLineDash([]);ctx.fillStyle='rgba(255,255,255,.8)';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(m.img&&im&&im.complete?'圖片遺失':(m.img?'載入中':'選擇素材'),0,0)}return[w,h]}
+ const res=8,o=mk(Math.ceil(w*res),Math.ceil(h*res)),x=o.getContext('2d');
+ x.drawImage(im,0,0,o.width,o.height);
+ if(mode==='bump'){if(m.style==='print')return[w,h];x.globalCompositeOperation='source-in';x.fillStyle=m.style==='puff'?'#fff':'#b0b0b0';x.fillRect(0,0,o.width,o.height);ctx.filter=m.style==='puff'?'blur(1px)':'none';ctx.drawImage(o,-w/2,-h/2,w,h);ctx.filter='none';return[w,h]}
+ if(m.tint){x.globalCompositeOperation='source-in';x.fillStyle=m.color;x.fillRect(0,0,o.width,o.height)}
+ if(m.style!=='print'){x.globalCompositeOperation='source-atop';const p=mk(6,6),px=p.getContext('2d');px.strokeStyle='rgba(0,0,0,.22)';px.beginPath();px.moveTo(0,6);px.lineTo(6,0);px.stroke();x.fillStyle=x.createPattern(p,'repeat');x.fillRect(0,0,o.width,o.height)}
+ if(m.style==='puff'){const sh=mk(o.width,o.height),sx=sh.getContext('2d');sx.drawImage(o,0,0);sx.globalCompositeOperation='source-in';sx.fillStyle='rgba(0,0,0,.45)';sx.fillRect(0,0,o.width,o.height);ctx.drawImage(sh,-w/2,-h/2+Math.max(.8,w*.015),w,h)}
+ ctx.drawImage(o,-w/2,-h/2,w,h);return[w,h];
+}
+function placeModule(ctx,m,mode){
+ const p=POS[m.pos],sf=SURF[p.c],k=sf.k(),cw=sf.w,ch=sf.h;
+ const cy=p.v*ch+m.dy*k,sx=sf.sx(cy/ch),cx=p.u*cw+m.dx*k*sx;
+ const offs=sf.wrap?[-cw,0,cw]:[0];let dims;
+ for(const ox of offs){ctx.save();ctx.translate(cx+ox,cy);ctx.scale(sx*k,k);ctx.rotate(m.rot*Math.PI/180);
+  dims=m.kind==='text'?drawText(ctx,m,mode):drawImg(ctx,m,mode);
+  if(mode==='color'&&showSel&&m.id===S.sel){ctx.setLineDash([5,4]);ctx.lineWidth=1.4/k;ctx.strokeStyle='#4f7bff';ctx.strokeRect(-dims[0]/2-4,-dims[1]/2-4,dims[0]+8,dims[1]+8);ctx.setLineDash([])}
+  ctx.restore()}
+ if(mode==='color')m._bb={c:p.c,cx,cy,hw:(dims[0]/2+4)*k*sx,hh:(dims[1]/2+4)*k*.8};
+}
+const modsOn=c=>S.modules.filter(m=>POS[m.pos]&&POS[m.pos].c===c&&posAllowed(m.pos));
+function seamList(){const t=CAPS[S.capType].seams;
+ if(t==='trucker')return[.06,.44,.6,.75,.9];if(t==='five')return[.11,.39,.6,.75,.9];
+ return[0,1,2,3,4,5].map(k=>(.25+k/6)%1)}
+function eyeletList(){const c=CAPS[S.capType];
+ if(c.mesh)return[];if(c.brim)return[[.47,.62],[.53,.62],[.97,.62],[.03,.62]];if(c.seams==='five')return[[.5,.42],[0,.42]];
+ return[0,1,2,3,4,5].map(k=>[((.25+1/12+k/6)%1),.3])}
+function dashLine(ctx,col,lw,pts){ctx.save();ctx.setLineDash([9,6]);ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(...pts[0]);for(const p of pts.slice(1))ctx.lineTo(...p);ctx.stroke();ctx.restore()}
+function drawCrown(){
+ const c=S.cap,cfg=CAPS[S.capType],x=crownC.getContext('2d'),b=crownB.getContext('2d'),a=crownA.getContext('2d');
+ x.fillStyle=c.body;x.fillRect(0,0,W,H);twill(x,W,H,'rgba(255,255,255,.035)','rgba(0,0,0,.05)');
+ b.fillStyle='#808080';b.fillRect(0,0,W,H);twill(b,W,H,'rgba(150,150,150,1)','rgba(110,110,110,1)');
+ if(cfg.mesh){ // mesh back panels
+  const m=mk(16,16),mx=m.getContext('2d');mx.fillStyle=c.mesh;mx.fillRect(0,0,16,16);mx.fillStyle=shade(c.mesh,-.6);for(const[px,py]of[[4,4],[12,12]]){mx.beginPath();mx.arc(px,py,2.8,0,7);mx.fill()}
+  const mb=mk(16,16),mbx=mb.getContext('2d');mbx.fillStyle='#9a9a9a';mbx.fillRect(0,0,16,16);mbx.fillStyle='#303030';for(const[px,py]of[[4,4],[12,12]]){mbx.beginPath();mbx.arc(px,py,2.8,0,7);mbx.fill()}
+  for(const[ctx,pat]of[[x,x.createPattern(m,'repeat')],[b,b.createPattern(mb,'repeat')]]){ctx.fillStyle=pat;ctx.fillRect(MESH_U[0]*W,0,(1-MESH_U[0])*W,H);ctx.fillRect(0,0,(MESH_U[1]-1)*W,H)}
+  // mesh reaches the top: blend top band back to body for the front foam
+ }
+ for(const u0 of seamList()){const u=u0*W;
+  b.strokeStyle='#3a3a3a';b.lineWidth=5;b.beginPath();b.moveTo(u,0);b.lineTo(u,H);b.stroke();
+  x.strokeStyle='rgba(0,0,0,.35)';x.lineWidth=3;x.beginPath();x.moveTo(u,0);x.lineTo(u,H);x.stroke();
+  for(const d of[-9,9]){dashLine(x,c.stitch,2.5,[[u+d,H*.06],[u+d,H]]);dashLine(b,'#5a5a5a',2.5,[[u+d,H*.06],[u+d,H]])}}
+ if(cfg.brim||cfg.seams==='five'){const y=(cfg.brim?.28:.22)*H;for(const[ctx,col,sc]of[[x,'rgba(0,0,0,.35)',c.stitch],[b,'#3a3a3a','#5a5a5a']]){ctx.strokeStyle=col;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();dashLine(ctx,sc,2.5,[[0,y+10],[W,y+10]])}}
+ if(cfg.brim)for(let i=0;i<4;i++){const y=H*(.4+i*.06);dashLine(x,c.stitch,2.2,[[0,y],[W,y]]);dashLine(b,'#5a5a5a',2.2,[[0,y],[W,y]])}
+ for(const[u0,v0]of eyeletList()){const u=u0*W,v=v0*H,sx=sxAt(v0);
+  for(const[ctx,ring,hole]of[[x,c.stitch,shade(c.body,-.6)],[b,'#d0d0d0','#202020']]){ctx.fillStyle=ring;ctx.beginPath();ctx.ellipse(u,v,11*sx,11,0,0,7);ctx.fill();ctx.fillStyle=hole;ctx.beginPath();ctx.ellipse(u,v,5*sx,5,0,0,7);ctx.fill()}}
+ for(const[ctx,col]of[[x,c.stitch],[b,'#5a5a5a']])dashLine(ctx,col,2.5,[[0,H-14],[W,H-14]]);
+ a.fillStyle='#fff';a.fillRect(0,0,W,H);
+ if(cfg.closure){x.save();x.setLineDash([9,6]);x.strokeStyle=c.stitch;x.lineWidth=2.5;x.translate(.75*W,H);x.scale(1.18,1.1);x.translate(-.75*W,-H);openPath(x);x.stroke();x.restore();a.fillStyle='#000';openPath(a);a.fill()}
+ modsOn('crown').forEach(m=>{placeModule(x,m,'color');placeModule(b,m,'bump')});
+}
+function drawVisor(){
+ const c=S.cap,x=visorC.getContext('2d'),b=visorB.getContext('2d'),u=underC.getContext('2d');
+ x.fillStyle=c.visor;x.fillRect(0,0,VW,VH);twill(x,VW,VH,'rgba(255,255,255,.035)','rgba(0,0,0,.05)');
+ b.fillStyle='#808080';b.fillRect(0,0,VW,VH);twill(b,VW,VH,'rgba(150,150,150,1)','rgba(110,110,110,1)');
+ u.fillStyle=c.under;u.fillRect(0,0,VW,VH);twill(u,VW,VH,'rgba(255,255,255,.03)','rgba(0,0,0,.05)');
+ for(let i=0;i<7;i++){const y=VH*(.62+i*.055);dashLine(x,c.stitch,2.5,[[0,y],[VW,y]]);dashLine(b,'#555',2.5,[[0,y],[VW,y]]);dashLine(u,shade(c.under,.15),2,[[0,y],[VW,y]])}
+ modsOn('visor').forEach(m=>{placeModule(x,m,'color');placeModule(b,m,'bump')});
+ modsOn('under').forEach(m=>placeModule(u,m,'color'));
+}
+function drawBrim(){
+ const c=S.cap,x=brimC.getContext('2d'),b=brimB.getContext('2d');
+ x.fillStyle=c.visor;x.fillRect(0,0,BW,BH);twill(x,BW,BH,'rgba(255,255,255,.035)','rgba(0,0,0,.05)');
+ b.fillStyle='#808080';b.fillRect(0,0,BW,BH);twill(b,BW,BH,'rgba(150,150,150,1)','rgba(110,110,110,1)');
+ for(let i=0;i<6;i++){const y=BH*(.2+i*.14);dashLine(x,c.stitch,2.5,[[0,y],[BW,y]]);dashLine(b,'#555',2.5,[[0,y],[BW,y]])}
+ modsOn('brim').forEach(m=>{placeModule(x,m,'color');placeModule(b,m,'bump')});
+}
+
+/* ================= three ================= */
+const stage=$('#stage');
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.outputColorSpace=THREE.SRGBColorSpace;
+stage.prepend(renderer.domElement);
+const scene=new THREE.Scene();
+scene.environment=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(),.04).texture;
+const camera=new THREE.PerspectiveCamera(32,1,.1,50);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.enablePan=false;controls.minDistance=1.5;controls.maxDistance=16;controls.zoomSpeed=2.6;controls.rotateSpeed=1.1;controls.target.set(0,.32,.25);controls.autoRotateSpeed=2.2;
+const key=new THREE.DirectionalLight(0xffffff,1.6);key.position.set(3,5,4);scene.add(key);
+const rim=new THREE.DirectionalLight(0xffffff,.6);rim.position.set(-4,2,-3);scene.add(rim);
+scene.add(new THREE.HemisphereLight(0xffffff,0x444444,.5));
+const fill=new THREE.DirectionalLight(0xffffff,.35);fill.position.set(0,-3,3);scene.add(fill);
+
+const tex=(cv,srgb)=>{const t=new THREE.CanvasTexture(cv);if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t};
+const tC=tex(crownC,true),tB=tex(crownB),tA=tex(crownA),tVC=tex(visorC,true),tVB=tex(visorB),tU=tex(underC,true),tBC=tex(brimC,true),tBB=tex(brimB);
+tBC.wrapS=tBB.wrapS=THREE.RepeatWrapping;
+const cap=new THREE.Group();scene.add(cap);
+const ZS=1.12;
+const M={
+ crown:new THREE.MeshStandardMaterial({map:tC,bumpMap:tB,bumpScale:2.2,alphaMap:tA,alphaTest:.5,roughness:.92,metalness:0}),
+ lining:new THREE.MeshStandardMaterial({side:THREE.BackSide,alphaMap:tA,alphaTest:.5,roughness:1}),
+ visorTop:new THREE.MeshStandardMaterial({map:tVC,bumpMap:tVB,bumpScale:2.2,roughness:.92,side:THREE.FrontSide}),
+ under:new THREE.MeshStandardMaterial({map:tU,roughness:.95,side:THREE.BackSide}),
+ edge:new THREE.MeshStandardMaterial({roughness:.95,side:THREE.DoubleSide}),
+ brimTop:new THREE.MeshStandardMaterial({map:tBC,bumpMap:tBB,bumpScale:2.2,roughness:.92,side:THREE.FrontSide}),
+ brimUnder:new THREE.MeshStandardMaterial({roughness:.95,side:THREE.BackSide}),
+ strap:new THREE.MeshStandardMaterial({side:THREE.DoubleSide,roughness:.9}),
+ metal:new THREE.MeshStandardMaterial({color:0xc9ccd2,metalness:.9,roughness:.3}),
+ snap:new THREE.MeshStandardMaterial({roughness:.5}),
+ button:new THREE.MeshStandardMaterial({roughness:.9})
+};
+let crown,lining,visorTop,visorBot,brimTop,brimBot,partGroup=new THREE.Group();cap.add(partGroup);
+function grid(N,Mn,fn){const pos=[],uv=[],idx=[];
+ for(let j=0;j<=Mn;j++)for(let i=0;i<=N;i++){const[p,t]=fn(i/N,j/Mn);pos.push(...p);uv.push(...t)}
+ for(let j=0;j<Mn;j++)for(let i=0;i<N;i++){const p=j*(N+1)+i;idx.push(p,p+N+1,p+1,p+1,p+N+1,p+N+2)}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g}
+function crownGeo(scale){return grid(192,72,(u,v)=>{const t=v*Math.PI/2,[r,y]=PROF(t),phi=u*Math.PI*2;
+ return[[-r*Math.cos(phi)*scale,y*scale+(1-scale)*.02,r*Math.sin(phi)*ZS*scale],[u,1-v]]})}
+function buildCapModel(){
+ const cfg=CAPS[S.capType];computeScale();
+ for(const o of[...partGroup.children]){partGroup.remove(o);o.geometry?.dispose()}
+ crown=new THREE.Mesh(crownGeo(1),M.crown);lining=new THREE.Mesh(crownGeo(.985),M.lining);partGroup.add(crown,lining);
+ const topY=PROF(0)[1];
+ if(cfg.button){const b=new THREE.Mesh(new THREE.SphereGeometry(.07,24,12),M.button);b.scale.set(1,.45,1);b.position.set(0,topY,0);partGroup.add(b)}
+ if(cfg.closure){const ang=.36;
+  const st=new THREE.Mesh(new THREE.CylinderGeometry(1,1,.075,24,1,true,Math.PI-ang,ang*2),M.strap);st.scale.set(1.012,1,ZS*1.012);st.position.y=.06;partGroup.add(st);
+  if(cfg.closure==='strap'){const bk=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.02),M.metal),t=Math.PI-.12;bk.position.set(Math.sin(t)*1.03,.06,Math.cos(t)*ZS*1.03);bk.rotation.y=t;partGroup.add(bk)}
+  else for(let i=0;i<5;i++){const t=Math.PI-.26+i*.13,sn=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.02,12),M.snap);sn.rotation.x=Math.PI/2;sn.rotation.y=t;sn.position.set(Math.sin(t)*1.03,.06,Math.cos(t)*ZS*1.03);sn.lookAt(sn.position.clone().multiplyScalar(2));sn.rotateX(Math.PI/2);partGroup.add(sn)}}
+ if(cfg.brim){
+  const br=(u,t,off)=>{const phi=u*Math.PI*2,r=1+.55*t,yy=-t*.26+off;return[[-r*Math.cos(phi),yy+.005,r*Math.sin(phi)*ZS*(1-.03*t)],[u,1-t]]};
+  brimTop=new THREE.Mesh(grid(160,10,(u,t)=>br(u,t,0)),M.brimTop);brimBot=new THREE.Mesh(grid(160,10,(u,t)=>br(u,t,-.03)),M.brimUnder);partGroup.add(brimTop,brimBot);
+  const pts=[];for(let i=0;i<=160;i++){const phi=i/160*Math.PI*2;pts.push(new THREE.Vector3(-1.55*Math.cos(phi),-.26-.015,1.55*Math.sin(phi)*ZS*.97))}
+  partGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true),200,.016,8,true),M.edge));visorTop=visorBot=null;
+ }else{
+  const{len,droop}=cfg.visor;
+  const vf=(a01,t,off,flip)=>{const a=a01*2-1,phi=a*1.25,L=len*Math.pow(1-a*a,.5);
+   const ix=Math.sin(phi)*.985,iz=Math.cos(phi)*ZS*.985,ox=Math.sin(phi)*(1+.06*L),oz=Math.cos(phi)*ZS+L;
+   return[[ix+(ox-ix)*t,-t*(.05+droop*a*a)*L/.82+off*Math.min(1,L*6)+.004,iz+(oz-iz)*t],[a01,flip?t:1-t]]};
+  visorTop=new THREE.Mesh(grid(64,16,(u,t)=>vf(u,t,0)),M.visorTop);visorBot=new THREE.Mesh(grid(64,16,(u,t)=>vf(u,t,-.035,true)),M.under);partGroup.add(visorTop,visorBot);
+  const pts=[];for(let i=0;i<=64;i++){const a=(i/64*2-1)*.985,phi=a*1.25,L=len*Math.pow(1-a*a,.5);pts.push(new THREE.Vector3(Math.sin(phi)*(1+.06*L),-(.05+droop*a*a)*L/.82-.0175*Math.min(1,L*6),Math.cos(phi)*ZS+L))}
+  partGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),96,.019,8,false),M.edge));brimTop=brimBot=null;
+ }
+ controls.target.set(0,topY*.36,cfg.brim?0:.25);
+ floor.position.y=cfg.brim?-.4:-.36;
+ requestRedraw();
+}
+// floor shadow
+let floor;
+{const c=mk(256,256),x=c.getContext('2d'),g=x.createRadialGradient(128,128,10,128,128,128);g.addColorStop(0,'rgba(0,0,0,.35)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,256,256);
+ floor=new THREE.Mesh(new THREE.PlaneGeometry(3.4,3.6),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));floor.rotation.x=-Math.PI/2;floor.position.set(0,-.36,.35);scene.add(floor)}
+
+function applyCapColors(){const c=S.cap;M.button.color.set(c.button);M.strap.color.set(c.strap);M.snap.color.set(shade(c.strap,-.3));M.edge.color.set(shade(c.visor,-.08));M.brimUnder.color.set(c.under);M.lining.color.set(c.lining||'#2a2d33')}
+let dirty=true;
+function redraw(){drawCrown();drawVisor();drawBrim();[tC,tB,tA,tVC,tVB,tU,tBC,tBB].forEach(t=>t.needsUpdate=true);applyCapColors()}
+function requestRedraw(){dirty=true}
+
+/* camera presets */
+const CAMS={front:[0,.18,1],left:[1,.18,.05],right:[-1,.18,.05],back:[0,.25,-1],top:[0,1,.35],under:[0,-.3,1]};
+let camAnim=null;
+function goCam(k){const d=new THREE.Vector3(...CAMS[k]).normalize().multiplyScalar(5.6);camAnim={from:camera.position.clone().sub(controls.target),to:d,t:0};
+ document.querySelectorAll('[data-cam]').forEach(b=>b.classList.toggle('on',b.dataset.cam===k))}
+camera.position.copy(controls.target).add(new THREE.Vector3(.55,.32,1).normalize().multiplyScalar(5.6));
+const sph=new THREE.Spherical(),sph2=new THREE.Spherical();
+function resize(){const r=stage.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(stage);resize();
+buildCapModel();
+function loop(){requestAnimationFrame(loop);
+ if(dirty){dirty=false;redraw()}
+ if(camAnim){camAnim.t=Math.min(1,camAnim.t+.06);const e=1-Math.pow(1-camAnim.t,3);sph.setFromVector3(camAnim.from);sph2.setFromVector3(camAnim.to);
+  let dt=sph2.theta-sph.theta;if(dt>Math.PI)dt-=2*Math.PI;if(dt<-Math.PI)dt+=2*Math.PI;
+  const s=new THREE.Spherical(sph.radius+(sph2.radius-sph.radius)*e,sph.phi+(sph2.phi-sph.phi)*e,sph.theta+dt*e);
+  camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(s));if(camAnim.t>=1)camAnim=null}
+ controls.update();renderer.render(scene,camera)}
+loop();$('#loading').remove();
+
+/* picking & moving */
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+function hit(e){const r=renderer.domElement.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,camera);
+ const objs=[crown,visorTop,visorBot,brimTop].filter(Boolean),h=ray.intersectObjects(objs,false)[0];if(!h)return null;
+ const c=h.object===crown?'crown':h.object===visorTop?'visor':h.object===visorBot?'under':'brim';return{c,uv:h.uv}}
+let moveMode=false,down=null,moving=false;
+renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};
+ if(moveMode&&mod(S.sel)){const h=hit(e);if(h&&h.c===POS[mod(S.sel).pos].c){moving=true;controls.enabled=false;moveTo(h)}}});
+renderer.domElement.addEventListener('pointermove',e=>{if(!moving)return;const h=hit(e);if(h&&h.c===POS[mod(S.sel).pos].c)moveTo(h)});
+renderer.domElement.addEventListener('pointerup',e=>{
+ if(moving){moving=false;controls.enabled=true;save();return}
+ if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<6){const h=hit(e);if(!h)return;
+  const sf=SURF[h.c],cw=sf.w,ch=sf.h,px=h.uv.x*cw,py=(1-h.uv.y)*ch;
+  const f=S.modules.find(m=>m._bb&&m._bb.c===h.c&&posAllowed(m.pos)&&[-cw,0,cw].some(o=>Math.abs(px-(m._bb.cx+o))<m._bb.hw)&&Math.abs(py-m._bb.cy)<m._bb.hh);
+  if(f&&f.id!==S.sel)select(f.id)}
+ down=null});
+function moveTo(h){const m=mod(S.sel),p=POS[m.pos],sf=SURF[h.c],k=sf.k();
+ let du=h.uv.x-p.u;if(sf.wrap)du-=Math.round(du);const v=1-h.uv.y;
+ m.dy=Math.round((v-p.v)*sf.h/k);m.dx=Math.round(du*sf.w/(k*sf.sx(v)));
+ m.dx=Math.max(-250,Math.min(250,m.dx));m.dy=Math.max(-120,Math.min(120,m.dy));syncVals();requestRedraw()}
+$('#moveBtn').onclick=()=>{moveMode=!moveMode;$('#moveBtn').classList.toggle('on',moveMode);
+ $('#hint').textContent=moveMode?'移動模式：在帽子上按住選取中的 logo 拖曳；拖曳空白處仍可旋轉。':'單指／滑鼠拖曳旋轉，雙指或滾輪縮放。點帽子上的 logo 可選取。';
+ if(moveMode){const m=mod(S.sel);if(m)goCam(POS[m.pos].g)}};
+function zoomBy(f){const off=camera.position.clone().sub(controls.target);const d=Math.max(controls.minDistance,Math.min(controls.maxDistance,off.length()*f));
+ camAnim={from:off,to:off.clone().setLength(d),t:0}}
+$('#zoomIn').onclick=()=>zoomBy(.88);$('#zoomOut').onclick=()=>zoomBy(1/.88);
+$('#autoBtn').onclick=()=>{controls.autoRotate=!controls.autoRotate;$('#autoBtn').classList.toggle('on',controls.autoRotate)};
+$('#camBar').onclick=e=>{const b=e.target.closest('[data-cam]');if(b)goCam(b.dataset.cam)};
+
+/* ================= screenshot ================= */
+const SHOT={range:'fit',bg:'transparent',res:2,fmt:'png',crop:{x:.15,y:.15,w:.7,h:.7},raw:null,out:null};
+function renderAt(w,h,dir,dist){
+ const pr=renderer.getPixelRatio(),sz=renderer.getSize(new THREE.Vector2()),cp=camera.position.clone(),asp=camera.aspect;
+ renderer.setPixelRatio(1);renderer.setSize(w,h,false);camera.aspect=w/h;
+ if(dir)camera.position.copy(controls.target).add(new THREE.Vector3(...dir).normalize().multiplyScalar(dist||5.3));
+ camera.updateProjectionMatrix();camera.lookAt(controls.target);
+ renderer.setClearColor(0x000000,0);renderer.render(scene,camera);
+ const c=mk(w,h);c.getContext('2d').drawImage(renderer.domElement,0,0,w,h);
+ renderer.setPixelRatio(pr);renderer.setSize(sz.x,sz.y,false);camera.aspect=asp;camera.position.copy(cp);camera.updateProjectionMatrix();camera.lookAt(controls.target);
+ return c}
+function bbox(c){const w=c.width,h=c.height,d=c.getContext('2d').getImageData(0,0,w,h).data;let x0=w,y0=h,x1=-1,y1=-1;
+ for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2)if(d[(y*w+x)*4+3]>16){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+ return x1<0?{x:0,y:0,w,h}:{x:x0,y:y0,w:x1-x0+2,h:y1-y0+2}}
+function cropTo(c,x,y,w,h){const o=mk(Math.round(w),Math.round(h));o.getContext('2d').drawImage(c,-x,-y);return o}
+function bgColor(){return SHOT.bg==='custom'?$('#bgColor').value:SHOT.bg}
+function labelColor(){const b=bgColor();if(b==='transparent')return'rgba(60,62,68,.8)';const n=parseInt(b.slice(1),16),l=(n>>16&255)*.3+(n>>8&255)*.59+(n&255)*.11;return l>140?'rgba(40,42,48,.75)':'rgba(255,255,255,.8)'}
+function buildRaw(){
+ showSel=false;redraw();const shadow=$('#optShadow').checked;
+ const r=renderer.domElement.getBoundingClientRect();let w=Math.round(r.width*SHOT.res),h=Math.round(r.height*SHOT.res);
+ const lim=4096/Math.max(w,h);if(lim<1){w=Math.round(w*lim);h=Math.round(h*lim)}
+ let out;
+ if(SHOT.range==='grid'){
+  const T=Math.min(1800,Math.round(600*SHOT.res));out=mk(T*2,T*2);const x=out.getContext('2d');
+  floor.visible=shadow;
+  [['front','正面'],['left','左側'],['right','右側'],['back','背面']].forEach(([k,l],i)=>{
+   x.drawImage(renderAt(T,T,CAMS[k],6.1),(i%2)*T,Math.floor(i/2)*T);
+   if($('#optLabels').checked){x.font=`600 ${Math.round(T*.045)}px -apple-system,"Noto Sans TC",sans-serif`;x.fillStyle=labelColor();x.fillText(l,(i%2)*T+T*.05,Math.floor(i/2)*T+T*.09)}});
+ }else{
+  floor.visible=shadow;const full=renderAt(w,h);
+  if(SHOT.range==='view'||SHOT.range==='custom')out=full;
+  else{floor.visible=false;const b=bbox(renderAt(w,h));const pad=Math.max(b.w,b.h)*.07;
+   let X=b.x-pad,Y=b.y-pad,BW=b.w+pad*2,BH=b.h+pad*2+(shadow?pad:0);
+   if(SHOT.range==='square'){const s=Math.max(BW,BH);X-=(s-BW)/2;Y-=(s-BH)/2;BW=BH=s}
+   out=cropTo(full,X,Y,BW,BH)}
+ }
+ floor.visible=true;showSel=true;requestRedraw();SHOT.raw=out;
+}
+function finalize(){
+ let c=SHOT.raw;if(!c)return null;
+ if(SHOT.range==='custom'){const k=SHOT.crop;c=cropTo(c,k.x*c.width,k.y*c.height,Math.max(8,k.w*c.width),Math.max(8,k.h*c.height))}
+ const o=mk(c.width,c.height),x=o.getContext('2d');let bg=bgColor();
+ if(SHOT.fmt==='jpg'&&bg==='transparent')bg='#ffffff';
+ if(bg!=='transparent'){x.fillStyle=bg;x.fillRect(0,0,o.width,o.height)}
+ x.drawImage(c,0,0);SHOT.out=o;return o}
+function showPreview(){
+ const cv=$('#shotCv'),src=SHOT.range==='custom'?SHOT.raw:finalize();if(!src)return;
+ if(SHOT.range==='custom')finalize();
+ const box=$('#shotPrev').getBoundingClientRect(),maxW=Math.max(200,box.width-12),maxH=Math.min(innerHeight*.6,620);
+ const sc=Math.min(maxW/src.width,maxH/src.height,1);cv.width=Math.round(src.width*sc);cv.height=Math.round(src.height*sc);
+ const x=cv.getContext('2d');x.clearRect(0,0,cv.width,cv.height);
+ if(SHOT.range==='custom'){const bg=bgColor();if(bg!=='transparent'){x.fillStyle=bg;x.fillRect(0,0,cv.width,cv.height)}}
+ x.drawImage(src,0,0,cv.width,cv.height);
+ placeCropBox();
+ const o=SHOT.out;$('#shotInfo').textContent=o?`輸出尺寸 ${o.width} × ${o.height} px・${SHOT.fmt.toUpperCase()}`:'';
+}
+function placeCropBox(){const cb=$('#cropBox'),cv=$('#shotCv');$('#cropHint').style.display=SHOT.range==='custom'?'block':'none';
+ if(SHOT.range!=='custom'){cb.style.display='none';return}
+ const pr=$('#shotPrev').getBoundingClientRect(),r=cv.getBoundingClientRect(),k=SHOT.crop;
+ Object.assign(cb.style,{display:'block',left:(r.left-pr.left+k.x*r.width)+'px',top:(r.top-pr.top+k.y*r.height)+'px',width:k.w*r.width+'px',height:k.h*r.height+'px'})}
+let cropDrag=null;
+$('#shotCv').addEventListener('pointerdown',e=>{if(SHOT.range!=='custom')return;const r=e.target.getBoundingClientRect();cropDrag={r,x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};e.target.setPointerCapture(e.pointerId)});
+$('#shotCv').addEventListener('pointermove',e=>{if(!cropDrag)return;const r=cropDrag.r,cl=v=>Math.max(0,Math.min(1,v));const x=cl((e.clientX-r.left)/r.width),y=cl((e.clientY-r.top)/r.height);
+ SHOT.crop={x:Math.min(x,cropDrag.x),y:Math.min(y,cropDrag.y),w:Math.abs(x-cropDrag.x),h:Math.abs(y-cropDrag.y)};placeCropBox()});
+$('#shotCv').addEventListener('pointerup',()=>{if(!cropDrag)return;cropDrag=null;if(SHOT.crop.w<.03||SHOT.crop.h<.03)SHOT.crop={x:.15,y:.15,w:.7,h:.7};finalize();placeCropBox();$('#shotInfo').textContent=`輸出尺寸 ${SHOT.out.width} × ${SHOT.out.height} px・${SHOT.fmt.toUpperCase()}`});
+function syncSeg(){document.querySelectorAll('#shotModal .seg').forEach(g=>{const k=g.dataset.opt;g.querySelectorAll('button').forEach(b=>b.classList.toggle('on',String(SHOT[k])===b.dataset.v))})}
+let shotT;function refreshShot(rebuild){clearTimeout(shotT);$('#shotInfo').textContent='產生預覽中…';shotT=setTimeout(()=>{if(rebuild)buildRaw();showPreview()},30)}
+$('#shotModal').addEventListener('click',e=>{const b=e.target.closest('.seg button');if(!b)return;const k=b.closest('.seg').dataset.opt;
+ SHOT[k]=k==='res'?+b.dataset.v:b.dataset.v;syncSeg();$('#shotMsg').textContent='';refreshShot(k==='range'||k==='res')});
+$('#bgColor').addEventListener('input',()=>{SHOT.bg='custom';syncSeg();refreshShot(false)});
+$('#optShadow').onchange=()=>refreshShot(true);$('#optLabels').onchange=()=>refreshShot(true);
+$('#shotBtn').onclick=()=>{$('#shotModal').classList.add('on');$('#shotMsg').textContent='';syncSeg();refreshShot(true)};
+$('#shotClose').onclick=()=>$('#shotModal').classList.remove('on');
+$('#shotModal').addEventListener('click',e=>{if(e.target.id==='shotModal')$('#shotModal').classList.remove('on')});
+const toBlob=(c,t)=>new Promise(r=>c.toBlob(r,t,.92));
+$('#shotSave').onclick=async()=>{const c=SHOT.out||finalize();if(!c)return;const t=SHOT.fmt==='jpg'?'image/jpeg':'image/png';const blob=await toBlob(c,t);
+ const d=new Date(),stamp=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+ const name=`cap-${SHOT.range}-${stamp}.${SHOT.fmt}`;
+ if(DL){try{const r=await DL.save({filename:name,data:blob});$('#shotMsg').textContent=r.status==='saved'?'已下載 '+name:'已送出';return}
+  catch(e){if(e&&e.code==='declined'){$('#shotMsg').textContent='已取消下載';return}if(e&&e.code==='rate_limited'){$('#shotMsg').textContent='下載視窗已開著，請稍候再試';return}}}
+ if(STANDALONE&&anchorDownload(name,blob)){$('#shotMsg').textContent='已下載 '+name;return}
+ $('#shotMsg').textContent='這個環境沒辦法直接下載。請按「複製圖片」再貼到別處。'};
+$('#shotCopy').onclick=async()=>{const c=SHOT.out||finalize();if(!c)return;try{const blob=await toBlob(c,'image/png');await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);$('#shotMsg').textContent='已複製到剪貼簿（PNG）'}catch(e){$('#shotMsg').textContent='瀏覽器不允許複製圖片，請改用下載'}};
+addEventListener('resize',()=>{if($('#shotModal').classList.contains('on'))showPreview()});
+
+/* ================= capabilities & library ================= */
+const STANDALONE=!(window.claude&&typeof window.claude.use==='function');
+function anchorDownload(name,blob){try{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);return true}catch(e){return false}}
+let DL=null,ASSETS=null,DB=null,LIB=[],libMode='local',libFilter='all';
+const okId=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{6,80}$/.test(v);
+function libNote(t){$('#libNote').textContent=t}
+function loadLocalLib(){libMode='local';try{LIB=JSON.parse(localStorage.getItem('capLib.v1'))||[]}catch(e){LIB=[]}
+ libNote(STANDALONE?'素材存在這個瀏覽器裡（換電腦或清除瀏覽器資料就不會在）。要給別人用，請把素材放進設計後「下載設計檔」，圖片會一起包進去。':'素材只存在這個瀏覽器裡。在 claude.ai 打開這個頁面，素材就會存到雲端，換裝置也看得到。');renderLib()}
+function saveLocalLib(){try{localStorage.setItem('capLib.v1',JSON.stringify(LIB));return true}catch(e){toast('瀏覽器空間不足，請刪掉一些素材');return false}}
+function initLib(){
+ if(!DB){loadLocalLib();return}
+ libMode=ASSETS?'cloud':'readonly';libNote(ASSETS?'素材存在這個頁面的雲端空間，換裝置也看得到。':'你只有檢視權限，可以使用素材但不能上傳。');
+ const t=setTimeout(()=>libNote('素材庫暫時連不上，稍後會自動重試。'),10000);
+ DB.collection('library').orderBy('createdAt','desc').onSnapshot(snap=>{clearTimeout(t);
+  LIB=snap.docs.map(d=>{const v=d.data()||{};return okId(v.asset)?{id:d.id,name:String(v.name||'素材').slice(0,60),cat:v.cat==='text'?'text':'graphic',ratio:+v.ratio||1,asset:v.asset,src:'/_blob/'+v.asset}:null}).filter(Boolean);
+  renderLib();if(mod(S.sel)?.kind==='image')buildEditor()},
+  e=>{clearTimeout(t);loadLocalLib()});
+}
+(()=>{const cl=window.claude;if(!cl||typeof cl.use!=='function'){loadLocalLib();setTimeout(()=>{loadLocalDesigns();openFromHash()});return}
+ libNote('連線素材庫中…');
+ cl.use('downloads').then(x=>DL=x).catch(()=>{});
+ Promise.all([cl.use('assets').catch(()=>null),cl.use('db').catch(()=>null)]).then(([a,d])=>{ASSETS=a;DB=d;initLib()});
+ setTimeout(()=>{loadLocalDesigns();openFromHash()});
+})();
+function renderLib(){
+ const list=LIB.filter(l=>libFilter==='all'||l.cat===libFilter),ro=libMode==='readonly';
+ $('#libFile').disabled=ro;
+ $('#libGrid').innerHTML=list.length?list.map(l=>`<div class="tile"><button class="thumb" data-place="${esc(l.id)}" title="放上帽子"><img src="${esc(l.src)}" alt="" loading="lazy"></button>
+  <div class="tname">${esc(l.name)}</div><div class="tact"><button data-place="${esc(l.id)}">＋放上</button>${ro?'':`<button data-cat="${esc(l.id)}">${l.cat==='text'?'文字':'圖案'} ⇄</button><button class="danger" data-del="${esc(l.id)}">刪除</button>`}</div></div>`).join('')
+  :`<div class="empty" style="grid-column:1/-1">${LIB.length?'這個分類還沒有素材':'還沒有素材，把設計師給的 PNG 上傳進來吧。'}</div>`;
+}
+const readImg=f=>new Promise((res,rej)=>{const u=URL.createObjectURL(f),i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u});
+async function addFiles(files,catMode){
+ const out=[];if(libMode==='readonly'){toast('沒有上傳權限');return out}
+ for(const f of files){
+  if(!/^image\/(png|jpeg|webp|svg\+xml)$/.test(f.type)){toast(`${f.name} 不是支援的圖片格式`);continue}
+  let img;try{img=await readImg(f)}catch(e){toast(`${f.name} 讀不到`);continue}
+  const ratio=(img.naturalHeight/img.naturalWidth)||1,cat=catMode==='auto'?(ratio<.5?'text':'graphic'):catMode,name=f.name.replace(/\.[^.]+$/,'').slice(0,60);
+  try{
+   if(libMode==='cloud'){toast(`上傳 ${name}…`);const r=await ASSETS.upload(f);const ref=await DB.collection('library').add({name,cat,ratio,asset:r.id,createdAt:Date.now()});
+    out.push({id:ref.id,name,cat,ratio,asset:r.id,src:'/_blob/'+r.id})}
+   else{let url;const max=1400;
+    if(f.type!=='image/svg+xml'&&Math.max(img.naturalWidth,img.naturalHeight)>max){const s=max/Math.max(img.naturalWidth,img.naturalHeight),cv=mk(img.naturalWidth*s,img.naturalHeight*s);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);url=cv.toDataURL('image/png')}
+    else url=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)});
+    const it={id:uid(),name,cat,ratio,src:url,createdAt:Date.now()};LIB.unshift(it);if(!saveLocalLib()){LIB.shift();break}out.push(it)}
+  }catch(e){toast(e&&e.code==='too_large'?`${name} 超過 20MB`:e&&e.code==='quota_or_state'?'素材空間已滿':`${name} 上傳失敗`)}
+ }
+ if(libMode==='local')renderLib();
+ if(out.length)toast(`已加入 ${out.length} 個素材`);return out}
+function assignLib(m,l){m.img=l.src;m.libId=l.id;m.ratio=l.ratio;m.name=l.name;ensureImg(m);renderList();buildEditor();requestRedraw();save()}
+function placeLib(l){
+ const isText=l.cat==='text',used=new Set(S.modules.map(x=>x.pos));
+ const pos=(isText?['back-center','left-back','right-back','back-upper','visor','brim-front','under']:['front-center','left-center','right-center','back-center','front-top']).find(p=>!used.has(p)&&posAllowed(p))||'front-center';
+ const m={id:uid(),kind:'image',img:l.src,libId:l.id,name:l.name,ratio:l.ratio,tint:false,pos,size:isText?110:72,rot:0,dx:0,dy:0,color:'#f2efe6',style:isText?'flat':'puff'};
+ S.modules.push(m);ensureImg(m);select(m.id);goCam(POS[m.pos].g);
+ document.querySelector('#paneTabs [data-pane="mods"]').click();toast(`已放上「${l.name}」`)}
+$('#libFile').addEventListener('change',async e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)await addFiles(fs,$('#libCat').value)});
+$('#libFilter').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;libFilter=b.dataset.f;document.querySelectorAll('#libFilter button').forEach(x=>x.classList.toggle('on',x===b));renderLib()};
+$('#libGrid').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
+ const id=b.dataset.place||b.dataset.cat||b.dataset.del,l=LIB.find(x=>x.id===id);if(!l)return;
+ if(b.dataset.place)placeLib(l);
+ else if(b.dataset.cat){const cat=l.cat==='text'?'graphic':'text';
+  if(libMode==='cloud'){try{await DB.collection('library').doc(l.id).update({cat})}catch(e){toast('更新失敗')}}else{l.cat=cat;saveLocalLib();renderLib()}}
+ else if(b.dataset.del){if(!b.dataset.armed){b.dataset.armed=1;b.textContent='確定？';setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent='刪除'}},2500);return}
+  try{if(libMode==='cloud'){await DB.collection('library').doc(l.id).delete();await ASSETS.delete(l.asset).catch(()=>{})}else{LIB=LIB.filter(x=>x!==l);saveLocalLib();renderLib()}
+   toast('已刪除素材（已放在帽子上的會顯示「圖片遺失」）');requestRedraw()}catch(e){toast('刪除失敗')}}
+});
+
+
+/* fonts */
+const loadedFonts=new Set();
+function ensureFont(m){if(m.kind!=='text'||!document.fonts)return;const k=`${m.weight} 40px "${m.font}"`;if(loadedFonts.has(k))return;loadedFonts.add(k);document.fonts.load(k,m.text).then(()=>requestRedraw()).catch(()=>{})}
+function ensureImg(m){if(m.kind==='image'&&m.img&&(!imgCache[m.id]||imgCache[m.id]._src!==m.img)){const i=new Image();i._src=m.img;i.onload=i.onerror=()=>requestRedraw();i.src=m.img;imgCache[m.id]=i}}
+
+/* ================= UI ================= */
+function renderList(){$('#modList').innerHTML=S.modules.length?S.modules.map(m=>`<button class="chip ${m.id===S.sel?'on':''}" data-sel="${m.id}"><b>${m.kind==='text'?esc(m.text||'(空白)'):'🖼 '+esc(m.name||'圖片 Logo')}</b><span>${POS[m.pos].label}・${STYLES[m.style]}</span></button>`).join(''):'<div class="empty">還沒有模組，從下方新增。</div>'}
+function rng(k,label,min,max,step=1){const m=mod(S.sel);return`<div class="field"><label>${label}</label><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${m[k]}"><output data-o="${k}">${m[k]}</output></div>`}
+function posOptions(sel){return Object.entries(GROUPS).filter(([g])=>Object.entries(POS).some(([k,p])=>p.g===g&&posAllowed(k))).map(([g,l])=>`<optgroup label="${l}">${Object.entries(POS).filter(([k,p])=>p.g===g&&(posAllowed(k)||k===sel)).map(([k,p])=>`<option value="${k}" ${k===sel?'selected':''}>${p.label}</option>`).join('')}</optgroup>`).join('')}
+function buildEditor(){
+ const m=mod(S.sel),el=$('#editor');
+ if(!m){el.innerHTML='<h3>模組設定</h3><div class="empty">選一個模組，或新增文字／圖片。</div>';return}
+ let h=`<h3>${m.kind==='text'?'文字模組':'圖片 Logo 模組'}</h3>`;
+ h+=m.kind==='text'?`<div class="field"><label>文字內容</label><input type="text" data-k="text" value="${esc(m.text)}"><span></span></div>`
+  :`<div class="field"><label>素材</label><select id="libPick"><option value="">— 從素材庫選 —</option>${LIB.map(l=>`<option value="${esc(l.id)}" ${l.id===m.libId?'selected':''}>${l.cat==='text'?'［文字］':'［圖案］'}${esc(l.name)}</option>`).join('')}</select><span></span></div>
+  <div class="field"><label>或上傳</label><input type="file" accept="image/png,image/webp,image/jpeg,image/svg+xml" id="imgFile"><span></span></div><div class="field"><label>單色化</label><label style="color:var(--ink)"><input type="checkbox" data-k="tint" ${m.tint?'checked':''}> 用下方顏色填色（刺繡感）</label><span></span></div>`;
+ h+=`<div class="field"><label>位置</label><select data-k="pos">${posOptions(m.pos)}</select><span></span></div>`;
+ if(m.kind==='text')h+=`<div class="field"><label>字型</label><select data-k="font">${FONTS.map(([f,l])=>`<option value="${f}" ${f===m.font?'selected':''}>${l}</option>`).join('')}</select><span></span></div>
+  <div class="field"><label>粗細</label><select data-k="weight">${[[400,'一般'],[600,'半粗'],[700,'粗'],[900,'特粗']].map(([w,l])=>`<option value="${w}" ${+m.weight===w?'selected':''}>${l}</option>`).join('')}</select><span></span></div>`;
+ h+=`<div class="field"><label>工藝</label><select data-k="style">${Object.entries(STYLES).map(([k,l])=>`<option value="${k}" ${k===m.style?'selected':''}>${l}</option>`).join('')}</select><span></span></div>
+ <div class="field"><label>顏色</label><div class="colorRow"><input type="color" data-k="color" value="${m.color}">${INK.map(c=>`<button class="sw" style="background:${c}" data-ink="${c}"></button>`).join('')}</div><span></span></div><div class="sep"></div>`;
+ h+=m.kind==='text'?rng('size','字高',6,90):rng('size','寬度',10,260);
+ if(m.kind==='text')h+=rng('ls','字距',-3,12,.5)+rng('arc','弧度',-40,40);
+ h+=rng('rot','旋轉',-45,45)+rng('dx','左右',-250,250)+rng('dy','上下',-120,120);
+ h+=`<div class="small" data-o="cm"></div><div class="sep"></div><div class="btnRow"><button class="btn" id="centerMod">位置歸零</button><button class="btn" id="dupMod">複製此模組</button><button class="btn danger" id="delMod">刪除</button></div>`;
+ el.innerHTML=h;updateCm();
+}
+function updateCm(){const m=mod(S.sel),o=$('[data-o="cm"]');if(!m||!o)return;o.textContent=m.kind==='text'?`字高約 ${(m.size*CM_PER_UNIT*.72).toFixed(1)} cm（估算）`:`寬度約 ${(m.size*CM_PER_UNIT).toFixed(1)} cm（估算）`}
+function syncVals(){const m=mod(S.sel);if(!m)return;document.querySelectorAll('#editor input[type=range]').forEach(i=>{i.value=m[i.dataset.k];const o=$(`[data-o="${i.dataset.k}"]`);if(o)o.textContent=m[i.dataset.k]})}
+function buildCap(){const c=S.cap,cfg=CAPS[S.capType];
+ const rows=[['body',cfg.mesh?'正面海綿片':'帽身'],['visor','帽簷'],['under','帽簷底面'],cfg.button&&['button','帽頂釦'],['stitch','車縫線'],cfg.mesh&&['mesh','網布'],cfg.closure&&['strap','後扣帶'],['lining','內裡']].filter(Boolean);
+ $('#capPanel').innerHTML=`<h3>帽型</h3><div class="typeGrid">${Object.entries(CAPS).map(([k,t])=>`<button class="typeBtn ${k===S.capType?'on':''}" data-type="${k}"><b>${t.label}</b><span>${t.desc}</span></button>`).join('')}</div><div class="sep"></div>
+ <h3>整頂套色</h3><div class="colorRow">${SWATCHES.map(s=>`<button class="sw" style="background:${s};width:30px;height:30px" data-all="${s}"></button>`).join('')}</div><div class="sep"></div><h3>分件顏色</h3>`+
+ rows.map(([k,l])=>`<div class="field"><label>${l}</label><div class="colorRow"><input type="color" data-c="${k}" value="${c[k]||'#2a2d33'}"><span class="small">${(c[k]||'').toUpperCase()}</span></div><span></span></div>`).join('')}
+function setCapType(t){if(!CAPS[t]||t===S.capType)return;S.capType=t;
+ const moved=[];S.modules.forEach(m=>{if(!posAllowed(m.pos)){const pref=m.pos.startsWith('visor')||m.pos==='under'?['brim-front']:m.pos.startsWith('brim-')?['visor','visor-left','visor-right']:[];m.pos=freePos([...pref,'right-front','left-front','front-low','front-top','front-left','front-right','front-center']);m.dx=m.dy=0;moved.push(m)}});
+ buildCapModel();buildCap();buildEditor();renderList();save();
+ if(moved.length)toast(`${moved.length} 個模組的位置在這個帽型上不能用，已移到可用位置`);else toast('已換成 '+CAPS[t].label)}
+function specText(){const c=S.cap;let t=`帽款：${CAPS[S.capType].label}\n帽身 ${c.body.toUpperCase()}｜帽簷 ${c.visor.toUpperCase()}／底 ${c.under.toUpperCase()}｜車縫線 ${c.stitch.toUpperCase()}${CAPS[S.capType].mesh?'｜網布 '+c.mesh.toUpperCase():''}${CAPS[S.capType].closure?'｜後扣帶 '+c.strap.toUpperCase():''}\n\n`;
+ S.modules.forEach((m,i)=>{t+=`【${i+1}】${POS[m.pos].label}｜${STYLES[m.style]}｜色 ${m.color.toUpperCase()}\n`;
+  t+=m.kind==='text'?`  文字：「${m.text}」\n  字型：${m.font}（${m.weight}）｜字高約 ${(m.size*CM_PER_UNIT*.72).toFixed(1)} cm｜字距 ${m.ls}｜弧度 ${m.arc}\n`:`  圖片 Logo（另附原檔）｜寬約 ${(m.size*CM_PER_UNIT).toFixed(1)} cm${m.tint?'｜單色':''}\n`;
+  t+=`  旋轉 ${m.rot}°｜位置微調 X ${m.dx} / Y ${m.dy}\n\n`});return t.trim()+'\n\n※ 尺寸為示意估算，請以打樣為準。'}
+const clean=()=>({cap:S.cap,modules:S.modules.map(({_bb,...m})=>m)});
+function updateOut(){$('#spec').value=specText()}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1600)}
+async function copy(text,ok){try{await navigator.clipboard.writeText(text);toast(ok)}catch(e){toast('無法自動複製，請長按文字框手動複製')}}
+function all(){S.modules.forEach(m=>{ensureFont(m);ensureImg(m)});renderList();buildEditor();buildCap();requestRedraw();save()}
+function select(id){S.sel=id;renderList();buildEditor();requestRedraw();save()}
+
+$('#paneTabs').onclick=e=>{const b=e.target.closest('[data-pane]');if(!b)return;document.querySelectorAll('#paneTabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.pane))};
+$('#modList').onclick=e=>{const b=e.target.closest('[data-sel]');if(b){select(b.dataset.sel);goCam(POS[mod(b.dataset.sel).pos].g)}};
+const freePos=list=>list.find(p=>posAllowed(p)&&!S.modules.some(m=>m.pos===p))||list.find(p=>posAllowed(p))||'front-center';
+$('#addText').onclick=()=>{const pos=freePos(['back-center','left-back','right-front','front-low','front-center']);const m={id:uid(),kind:'text',text:'TEXT',pos,font:'Oswald',size:24,weight:700,ls:1,arc:0,rot:0,dx:0,dy:0,color:'#f2efe6',style:'flat'};S.modules.push(m);ensureFont(m);select(m.id);goCam(POS[pos].g)};
+$('#addImg').onclick=()=>{const pos=freePos(['right-center','left-center','right-front','front-center']);const m={id:uid(),kind:'image',img:null,ratio:1,tint:false,pos,size:70,rot:0,dx:0,dy:0,color:'#f2efe6',style:'flat'};S.modules.push(m);select(m.id);goCam(POS[pos].g)};
+const ed=$('#editor');
+ed.addEventListener('input',e=>{const k=e.target.dataset.k,m=mod(S.sel);if(!k||!m)return;
+ let v=e.target.type==='checkbox'?e.target.checked:e.target.value;if(e.target.type==='range'||k==='weight')v=+v;m[k]=v;
+ if(k==='pos'){m.dx=0;m.dy=0;syncVals();goCam(POS[v].g)}
+ const o=$(`[data-o="${k}"]`);if(o)o.textContent=v;
+ ensureFont(m);updateCm();renderList();requestRedraw();save()});
+ed.addEventListener('click',e=>{const m=mod(S.sel);if(!m)return;
+ if(e.target.dataset.ink){m.color=e.target.dataset.ink;$('#editor [data-k="color"]').value=m.color;requestRedraw();save()}
+ if(e.target.id==='centerMod'){m.dx=0;m.dy=0;m.rot=0;syncVals();requestRedraw();save()}
+ if(e.target.id==='dupMod'){const n={...m,id:uid(),dy:m.dy+20};delete n._bb;S.modules.push(n);ensureImg(n);select(n.id)}
+ if(e.target.id==='delMod'){S.modules=S.modules.filter(x=>x.id!==m.id);S.sel=S.modules[0]?.id||null;all()}});
+ed.addEventListener('change',async e=>{const m=mod(S.sel);if(!m)return;
+ if(e.target.id==='libPick'){const l=LIB.find(x=>x.id===e.target.value);if(l)assignLib(m,l);return}
+ if(e.target.id==='imgFile'&&e.target.files[0]){const items=await addFiles([e.target.files[0]],'auto');if(items[0])assignLib(m,items[0])}});
+$('#capPanel').addEventListener('input',e=>{const k=e.target.dataset.c;if(!k)return;S.cap[k]=e.target.value;e.target.nextElementSibling.textContent=e.target.value.toUpperCase();requestRedraw();save()});
+$('#capPanel').addEventListener('click',e=>{const tb=e.target.closest('[data-type]');if(tb){setCapType(tb.dataset.type);return}const s=e.target.dataset.all;if(!s)return;const light=parseInt(s.slice(1,3),16)>150;Object.assign(S.cap,{body:s,visor:s,under:shade(s,-.15),button:s,strap:s,mesh:s,stitch:shade(s,light?-.12:.1)});buildCap();requestRedraw();save()});
+$('#copySpec').onclick=()=>copy(specText(),'已複製規格');
+
+/* ================= design save / load ================= */
+const HEX=/^#[0-9a-fA-F]{6}$/;
+function sanitizeDesign(j){
+ if(!j||typeof j!=='object'||!Array.isArray(j.modules))throw new Error('bad');
+ const dc=defaultState().cap,cap={};for(const k in dc)cap[k]=HEX.test(j.cap?.[k])?j.cap[k]:dc[k];
+ const num=(v,d,lo,hi)=>{v=+v;return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):d};
+ const modules=j.modules.slice(0,40).filter(m=>m&&POS[m.pos]&&(m.kind==='text'||m.kind==='image')).map(m=>{
+  const o={id:okId(m.id)?m.id:uid(),kind:m.kind,pos:m.pos,size:num(m.size,30,4,300),rot:num(m.rot,0,-180,180),dx:num(m.dx,0,-300,300),dy:num(m.dy,0,-200,200),
+   color:HEX.test(m.color)?m.color:'#f2efe6',style:STYLES[m.style]?m.style:'flat'};
+  if(m.kind==='text')Object.assign(o,{text:String(m.text??'').slice(0,80),font:FONTS.some(f=>f[0]===m.font)?m.font:'Oswald',weight:[400,600,700,900].includes(+m.weight)?+m.weight:400,ls:num(m.ls,0,-5,20),arc:num(m.arc,0,-60,60)});
+  else{const img=typeof m.img==='string'&&(/^\/_blob\/[A-Za-z0-9_-]+$/.test(m.img)||/^data:image\/(png|jpeg|webp|svg\+xml);base64,/.test(m.img))?m.img:null;
+   Object.assign(o,{img,libId:typeof m.libId==='string'?m.libId.slice(0,80):undefined,name:String(m.name||'圖片').slice(0,60),ratio:num(m.ratio,1,.02,50),tint:!!m.tint})}
+  return o});
+ return{cap,modules,capType:CAPS[j.capType]?j.capType:'dad',name:String(j.name||'').slice(0,60)};
+}
+function loadDesign(d,meta){S.cap=d.cap;S.modules=d.modules;const tc=S.capType!==d.capType;S.capType=d.capType;if(tc)buildCapModel();S.sel=d.modules[0]?.id||null;
+ S.designId=meta?.id||null;S.designName=meta?.name||d.name||'';$('#dsName').value=S.designName;all();renderDesigns()}
+function currentDesign(){return{v:1,name:$('#dsName').value.trim()||'未命名設計',capType:S.capType,cap:{...S.cap},modules:S.modules.map(({_bb,...m})=>({...m}))}}
+function thumb(){showSel=false;redraw();floor.visible=false;
+ const c=renderAt(240,240,[.6,.28,1],6.2),o=mk(240,240),x=o.getContext('2d');x.fillStyle='#e4e5e8';x.fillRect(0,0,240,240);x.drawImage(c,0,0);
+ floor.visible=true;showSel=true;requestRedraw();return o.toDataURL('image/jpeg',.78)}
+
+let DESIGNS=[],dsMode='local';
+function dsNote(t){$('#dsNote').textContent=t}
+function loadLocalDesigns(){dsMode='local';try{DESIGNS=JSON.parse(localStorage.getItem('capDesigns.v1'))||[]}catch(e){DESIGNS=[]}
+ dsNote('快速存檔會存在這台電腦的瀏覽器裡，方便切換不同版本。要給別人看或長期備份，請用上面的「下載設計檔」。');renderDesigns()}
+function saveLocalDesigns(){try{localStorage.setItem('capDesigns.v1',JSON.stringify(DESIGNS));return true}catch(e){toast('瀏覽器空間不足，請刪掉一些存檔');return false}}
+function initDesigns(){
+ if(!DB){loadLocalDesigns();openFromHash();return}
+ dsMode='cloud';dsNote('存檔放在這個頁面的雲端。把頁面分享給別人後，對方打開就看得到這些設計。');
+ const t=setTimeout(()=>dsNote('存檔暫時連不上，稍後會自動重試。'),10000);let first=true;
+ DB.collection('designs').orderBy('updatedAt','desc').onSnapshot(snap=>{clearTimeout(t);
+  DESIGNS=snap.docs.map(d=>{const v=d.data()||{};return{id:d.id,name:String(v.name||'未命名設計').slice(0,60),thumb:typeof v.thumb==='string'&&v.thumb.startsWith('data:image/jpeg;base64,')?v.thumb:'',updatedAt:+v.updatedAt||0,data:v}});
+  renderDesigns();if(first){first=false;openFromHash()}},
+  e=>{clearTimeout(t);loadLocalDesigns();openFromHash()});
+}
+function openFromHash(){const m=/^#design-([A-Za-z0-9_-]+)$/.exec(location.hash);if(!m)return;const d=DESIGNS.find(x=>x.id===m[1]);
+ if(d)openDesign(d,true);else toast('找不到這個設計，可能已被刪除')}
+function openDesign(d,quiet){try{const v=dsMode==='cloud'?d.data:d;loadDesign(sanitizeDesign(v),{id:d.id,name:d.name});
+ try{location.hash='design-'+d.id}catch(e){}if(!quiet)toast(`已開啟「${d.name}」`);document.querySelector('#paneTabs [data-pane="mods"]').click();goCam('front')}catch(e){toast('這個存檔格式有問題')}}
+function fmtDate(t){if(!t)return'';const d=new Date(t);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
+function renderDesigns(){
+ $('#dsCur').textContent=S.designId?`目前編輯中：${S.designName||'未命名設計'}（按「儲存」會覆蓋這個存檔）`:'目前是新設計，按「儲存」會新增一筆存檔。';
+ $('#dsList').innerHTML=DESIGNS.length?DESIGNS.map(d=>`<div class="ds ${d.id===S.designId?'on':''}"><img src="${esc(d.thumb||'')}" alt=""><div><b>${esc(d.name)}</b><span class="small">${fmtDate(d.updatedAt)}</span></div>
+  <div class="acts"><button data-open="${esc(d.id)}">開啟</button><button data-link="${esc(d.id)}">下載</button><button class="danger" data-dsdel="${esc(d.id)}">刪除</button></div></div>`).join('')
+  :'<div class="empty">還沒有存檔。</div>';
+}
+async function inlineToAssets(design){
+ if(dsMode!=='cloud'||!ASSETS)return design;
+ for(const m of design.modules){if(m.kind==='image'&&m.img&&m.img.startsWith('data:')){const blob=await (await fetch(m.img)).blob();const r=await ASSETS.upload(blob);m.img='/_blob/'+r.id}}
+ return design}
+let saving=false;
+async function saveDesign(asNew){
+ if(saving)return;saving=true;const btns=[$('#dsSave'),$('#dsSaveAs')];btns.forEach(b=>b.disabled=true);
+ try{
+  let d=currentDesign();d.thumb=thumb();d.updatedAt=Date.now();
+  const id=!asNew&&S.designId&&DESIGNS.some(x=>x.id===S.designId)?S.designId:null;
+  if(dsMode==='cloud'){
+   d=await inlineToAssets(d);
+   if(JSON.stringify(d).length>240000){toast('設計太大，存檔失敗（圖片請改用素材庫上傳）');return}
+   if(id){await DB.collection('designs').doc(id).set(d);S.designId=id}
+   else{const ref=await DB.collection('designs').add(d);S.designId=ref.id}
+   S.modules=d.modules.map(m=>({...m}));S.modules.forEach(ensureImg);
+  }else{
+   if(id){const i=DESIGNS.findIndex(x=>x.id===id);DESIGNS[i]={...d,id}}else{S.designId=uid();DESIGNS.unshift({...d,id:S.designId})}
+   DESIGNS.sort((a,b)=>b.updatedAt-a.updatedAt);if(!saveLocalDesigns())return;
+  }
+  S.designName=d.name;$('#dsName').value=d.name;try{location.hash='design-'+S.designId}catch(e){}
+  save();renderDesigns();toast(`已儲存「${d.name}」`);
+ }catch(e){toast(e&&e.code==='invalid_argument'?'你只有檢視權限，無法存檔':e&&e.code==='quota_exceeded'?'雲端空間已滿，請刪掉一些存檔':'存檔失敗，請再試一次')}
+ finally{saving=false;btns.forEach(b=>b.disabled=false)}
+}
+$('#dsSave').onclick=()=>saveDesign(false);
+$('#dsSaveAs').onclick=()=>saveDesign(true);
+$('#dsNew').onclick=()=>{S.designId=null;S.designName='';$('#dsName').value='';try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}renderDesigns();save();toast('接下來按「儲存」會新增一筆存檔')};
+$('#dsList').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const id=b.dataset.open||b.dataset.link||b.dataset.dsdel,d=DESIGNS.find(x=>x.id===id);if(!d)return;
+ if(b.dataset.open)openDesign(d);
+ else if(b.dataset.link){openDesign(d,true);document.querySelector('#paneTabs [data-pane="out"]').click();$('#fileSave').click()}
+ else if(b.dataset.dsdel){if(!b.dataset.armed){b.dataset.armed=1;b.textContent='確定？';setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent='刪除'}},2500);return}
+  try{if(dsMode==='cloud')await DB.collection('designs').doc(id).delete();else{DESIGNS=DESIGNS.filter(x=>x!==d);saveLocalDesigns()}
+   if(S.designId===id){S.designId=null;save()}renderDesigns();toast('已刪除存檔')}catch(e){toast('刪除失敗')}}
+});
+// file export / import
+async function designFileBlob(){const d=currentDesign();
+ for(const m of d.modules){if(m.kind==='image'&&m.img&&m.img.startsWith('/_blob/')){try{const b=await (await fetch(m.img)).blob();m.img=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b)})}catch(e){}}}
+ return new Blob([JSON.stringify({app:'cap-configurator',...d},null,1)],{type:'application/json'})}
+$('#fileSave').onclick=async()=>{const name=($('#dsName').value.trim()||'帽子設計').replace(/[\\/:*?"<>|]/g,'_')+'.json';const blob=await designFileBlob();
+ if(STANDALONE&&anchorDownload(name,blob)){$('#fileMsg').textContent='已下載 '+name+'（圖片也包在檔案裡）';return}
+ if(DL){try{await DL.save({filename:name,data:blob});$('#fileMsg').textContent='已下載 '+name+'（圖片也包在檔案裡）';return}catch(e){if(e&&e.code==='declined'){$('#fileMsg').textContent='已取消';return}}}
+ $('#fileMsg').textContent='這裡沒辦法直接下載，請改用「複製設計文字」，貼到記事本存成 .json 檔。'};
+$('#fileOpen').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+ try{const j=JSON.parse(await f.text());const d=sanitizeDesign(j);S.designId=null;loadDesign(d,{name:d.name||f.name.replace(/\.json$/i,'')});
+  $('#fileMsg').textContent=`已開啟「${f.name}」。要留一份在這個瀏覽器，按下面的「儲存」。`;toast('已開啟設計檔')}catch(err){$('#fileMsg').textContent='這個檔案不是有效的設計檔'}});
+$('#copyJson').onclick=async()=>{const t=await (await designFileBlob()).text();copy(t,'已複製設計文字，可貼到記事本存成 .json')};
+
+const rb=$('#reset');rb.onclick=()=>{if(rb.dataset.armed){S=defaultState();buildCapModel();all();toast('已重設');delete rb.dataset.armed;rb.textContent='重設為原版 WAKNS'}else{rb.dataset.armed=1;rb.textContent='再按一次確認重設';setTimeout(()=>{delete rb.dataset.armed;rb.textContent='重設為原版 WAKNS'},3000)}};
+
+all();goCam('front');$('#dsName').value=S.designName||'';
+document.fonts&&document.fonts.ready.then(requestRedraw);
+</script>
+</body>
+</html>
